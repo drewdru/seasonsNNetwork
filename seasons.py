@@ -1,5 +1,5 @@
 import sys, os
-import neural_network
+from . import neural_network
 # from vk_base import models
 import json
 import random
@@ -7,52 +7,52 @@ import math
 
 from PIL import Image
 
-def get_histogram(img, size):   
-    histogramR = [] 
-    histogramG = [] 
-    histogramB = [] 
+def get_histogram(img, size):
+    histogram_r = []
+    histogram_g = []
+    histogram_b = []
     for i in range(256):
-        histogramR.append(0)
-        histogramG.append(0)
-        histogramB.append(0)        
+        histogram_r.append(0)
+        histogram_g.append(0)
+        histogram_b.append(0)
     for i in range(size[0]):
         for j in range(size[1]):
             r, g, b = img.getpixel((i, j))
-            histogramR[r] += 1
-            histogramG[g] += 1
-            histogramB[b] += 1
+            histogram_r[r] += 1
+            histogram_g[g] += 1
+            histogram_b[b] += 1
     histogram = []
     for i in range(256):
-        histogramR[i] /= size[0]*size[1]
-        histogramG[i] /= size[0]*size[1]
-        histogramB[i] /= size[0]*size[1]
-        histogram.append(histogramR[i])
-        histogram.append(histogramG[i])
-        histogram.append(histogramB[i])
+        histogram_r[i] /= size[0]*size[1]
+        histogram_g[i] /= size[0]*size[1]
+        histogram_b[i] /= size[0]*size[1]
+        histogram.append(histogram_r[i])
+        histogram.append(histogram_g[i])
+        histogram.append(histogram_b[i])
     return histogram
 
 def create_training_sets():
     image_paths = ['./autumn/', './summer/', './spring/', './winter/']
-    imgList = {'image': []}
+    image_list = {'image': []}
     size = 64, 64
 
     for season_idx, path in enumerate(image_paths):
         season = [0, 0, 0, 0]
         season[season_idx] = 1
-        imageList = os.listdir(path)
-        for inImage1 in imageList:
-            img = Image.open(path + inImage1)
-            img = img.convert(mode='RGB') 
+        image_list = os.listdir(path)
+        for in_image in image_list:
+            img = Image.open(path + in_image)
+            img = img.convert(mode='RGB')
             img = img.resize(size, Image.ANTIALIAS)
             histogram = get_histogram(img, size)
             obj = {
                 'histogram': histogram,
                 'season': season,
             }
-            imgList['image'].append(obj)
+            image_list['image'].append(obj)
 
     with open('training_set.json', 'w') as outfile:
-        json.dump(imgList, outfile)
+        json.dump(image_list, outfile)
 
 
 class NetworkInfo:
@@ -74,7 +74,7 @@ class NetworkInfo:
     def __init__(self, is_train=False):
         self.get_training_sets()
         self.get_network_from_file(is_train)
-    
+
     def get_training_sets(self):
         while True:
             try:
@@ -82,9 +82,9 @@ class NetworkInfo:
                     training_set = json.load(json_data)
                     for image in training_set['image']:
                         row = [image['histogram'], image['season']]
-                        self.training_sets.append(row)       
+                        self.training_sets.append(row)
                 break
-            except FileNotFoundError as error:
+            except FileNotFoundError:
                 create_training_sets()
 
     def get_network_from_file(self, is_train=False):
@@ -98,16 +98,15 @@ class NetworkInfo:
                 print('if you want create new neural-network run with key -t')
                 self.is_read_file_error = True
         if network:
-            self.num_hidden = network['hidden_layer']['count_neurons']    
+            self.num_hidden = network['hidden_layer']['count_neurons']
             self.hidden_layer_bias = []
-            self.hidden_layer_weights = []    
+            self.hidden_layer_weights = []
             for neuron in network['hidden_layer']['neurons']:
                 self.hidden_layer_bias.append(neuron['bias'])
                 for weight in neuron['weights']:
                     self.hidden_layer_weights.append(weight)
-            
             self.output_layer_bias = []
-            self.output_layer_weights = []    
+            self.output_layer_weights = []
             for neuron in network['output_layer']['neurons']:
                 self.output_layer_bias.append(neuron['bias'])
                 for weight in neuron['weights']:
@@ -115,15 +114,15 @@ class NetworkInfo:
             self.total_error = network['total_error']
 
 def train(epsilon=0.001):
-    network = NetworkInfo(is_train=True)    
+    network = NetworkInfo(is_train=True)
     nn = neural_network.NeuralNetwork(
-        num_inputs = network.num_inputs, 
-        num_hidden = network.num_hidden, 
-        num_outputs = network.num_outputs, 
-        hidden_layer_weights = network.hidden_layer_weights, 
-        hidden_layer_bias = network.hidden_layer_bias, 
-        output_layer_weights = network.output_layer_weights, 
-        output_layer_bias = network.output_layer_bias,
+        num_inputs=network.num_inputs,
+        num_hidden=network.num_hidden,
+        num_outputs=network.num_outputs,
+        hidden_layer_weights=network.hidden_layer_weights,
+        hidden_layer_bias=network.hidden_layer_bias,
+        output_layer_weights=network.output_layer_weights,
+        output_layer_bias=network.output_layer_bias,
     )
     print('networ is get')
     total_error = network.total_error
@@ -135,7 +134,6 @@ def train(epsilon=0.001):
             outputs = nn.feed_forward(training_inputs)
             for i in range(len(outputs)):
                 outputs[i] = round(outputs[i])
-
             if count == 1000:
                 print(outputs, training_outputs)
                 total_error = nn.calculate_total_error(network.training_sets)
@@ -146,8 +144,8 @@ def train(epsilon=0.001):
                 count = 0
             else:
                 count += 1
-        except Exception as e:
-            print(e)
+        except Exception as error:
+            print(error)
             network_data = nn.inspect(network.training_sets)
             with open('network.json', 'w') as outfile:
                 json.dump(network_data, outfile)
@@ -160,69 +158,64 @@ def train(epsilon=0.001):
     print('Total error: ', total_error)
 
 def main(filepath = './ToTest/Kuindji_Rannyy_vesna.jpg'):
-    size = 64, 64    
+    size = 64, 64
 
     network = NetworkInfo()
     if network.is_read_file_error:
         return
     nn = neural_network.NeuralNetwork(
-        num_inputs = network.num_inputs, 
-        num_hidden = network.num_hidden, 
-        num_outputs = network.num_outputs, 
-        hidden_layer_weights = network.hidden_layer_weights, 
-        hidden_layer_bias = network.hidden_layer_bias, 
-        output_layer_weights = network.output_layer_weights, 
-        output_layer_bias = network.output_layer_bias,
+        num_inputs=network.num_inputs,
+        num_hidden=network.num_hidden,
+        num_outputs=network.num_outputs,
+        hidden_layer_weights=network.hidden_layer_weights,
+        hidden_layer_bias=network.hidden_layer_bias,
+        output_layer_weights=network.output_layer_weights,
+        output_layer_bias=network.output_layer_bias,
     )
-    # network_data = nn.inspect(network.training_sets)
-    # print(json.dumps(network_data, sort_keys=True, indent=4, separators=(',', ': ')))
-    # print(network.training_sets[0])
 
     img = Image.open(filepath)
     img.show()
-    img = img.convert(mode='RGB') 
+    img = img.convert(mode='RGB')
     img = img.resize(size, Image.ANTIALIAS)
     histogram = get_histogram(img, size)
 
     network_outputs = nn.feed_forward(histogram)
-    answer_text = ['осень', 'лето', 'весна', 'зима']
-    print('network_outputs:') 
+    answer_text = ['autumn', 'summer', 'spring', 'winter']
+    print('network_outputs:')
     answer = []
-    count = 0
     for indx, output in enumerate(network_outputs):
         print(answer_text[indx].title() + ':\t', output)
         if round(output) == 1:
             answer.append(indx)
     if len(answer) == 0:
-        index = maxToIndex(network_outputs)
+        index = max_to_index(network_outputs)
         print('Время года: наверное это', answer_text[index])
-    elif len(answer) > 1:        
-        index = maxOfOutputsToIndex(answer, network_outputs)
+    elif len(answer) > 1:
+        index = max_of_outputs_to_index(answer, network_outputs)
         print('Время года: скорее всего это', answer_text[index])
         for result in answer:
             if result != index:
                 print('И это похоже на:', answer_text[result])
-    else:        
+    else:
         print('Время года: ', answer_text[answer[0]])
 
-def maxToIndex(vList):
-    max = 0
-    indexOfMax = 0
-    for indx, output in enumerate(vList):
-        if output > max:
-            max = output
-            indexOfMax = indx  
-    return indexOfMax
+def max_to_index(value):
+    max_value = 0
+    index_of_max = 0
+    for indx, output in enumerate(value):
+        if output > max_value:
+            max_value = output
+            index_of_max = indx
+    return index_of_max
 
-def maxOfOutputsToIndex(answer, network_outputs):
-    max = 0
-    indexOfMax = 0
-    for output in answer:    
-        if network_outputs[output] > max:
-            max = network_outputs[output]
-            indexOfMax = output  
-    return indexOfMax
-            
+def max_of_outputs_to_index(answer, network_outputs):
+    max_value = 0
+    index_of_max = 0
+    for output in answer:
+        if network_outputs[output] > max_value:
+            max_value = network_outputs[output]
+            index_of_max = output
+    return index_of_max
 
 def help():
     print('Usage: python main.py [-h] [-t] [-f]')
