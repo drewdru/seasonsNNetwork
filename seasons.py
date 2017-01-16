@@ -8,6 +8,9 @@ import math
 from PIL import Image
 
 def get_histogram(img, size):
+    """Get the image histogram on the 3rd channels
+       @return histograms array
+    """
     histogram_r = []
     histogram_g = []
     histogram_b = []
@@ -32,6 +35,9 @@ def get_histogram(img, size):
     return histogram
 
 def create_training_sets():
+    """Create training sets from directories with images.
+       Use directories  for image classification.
+    """
     image_paths = ['./autumn/', './summer/', './spring/', './winter/']
     image_list = {'image': []}
     size = 64, 64
@@ -56,6 +62,7 @@ def create_training_sets():
 
 
 class NetworkInfo:
+    """Network info class"""
     num_inputs = 256*3
     num_hidden = 4
     num_outputs = 4
@@ -76,6 +83,7 @@ class NetworkInfo:
         self.get_network_from_file(is_train)
 
     def get_training_sets(self):
+        """Setup training sets from file"""
         while True:
             try:
                 with open('training_set.json') as json_data:
@@ -88,6 +96,7 @@ class NetworkInfo:
                 create_training_sets()
 
     def get_network_from_file(self, is_train=False):
+        """Setup neural network from file"""
         network = None
         try:
             with open('network.json') as json_data:
@@ -114,8 +123,9 @@ class NetworkInfo:
             self.total_error = network['total_error']
 
 def train(epsilon=0.001):
+    """Training neural_network"""
     network = NetworkInfo(is_train=True)
-    nn = neural_network.NeuralNetwork(
+    neural_network_data = neural_network.NeuralNetwork(
         num_inputs=network.num_inputs,
         num_hidden=network.num_hidden,
         num_outputs=network.num_outputs,
@@ -130,15 +140,15 @@ def train(epsilon=0.001):
     while total_error > epsilon:
         try:
             training_inputs, training_outputs = random.choice(network.training_sets)
-            nn.train(training_inputs, training_outputs)
-            outputs = nn.feed_forward(training_inputs)
+            neural_network_data.train(training_inputs, training_outputs)
+            outputs = neural_network_data.feed_forward(training_inputs)
             for i in range(len(outputs)):
                 outputs[i] = round(outputs[i])
             if count == 1000:
                 print(outputs, training_outputs)
-                total_error = nn.calculate_total_error(network.training_sets)
+                total_error = neural_network_data.calculate_total_error(network.training_sets)
                 print('error = ', total_error)
-                network_data = nn.inspect(network.training_sets)
+                network_data = neural_network_data.inspect(network.training_sets)
                 with open('network.json', 'w') as outfile:
                     json.dump(network_data, outfile)
                 count = 0
@@ -146,24 +156,24 @@ def train(epsilon=0.001):
                 count += 1
         except Exception as error:
             print(error)
-            network_data = nn.inspect(network.training_sets)
+            network_data = neural_network_data.inspect(network.training_sets)
             with open('network.json', 'w') as outfile:
                 json.dump(network_data, outfile)
 
-    network_data = nn.inspect(network.training_sets)
+    network_data = neural_network_data.inspect(network.training_sets)
     with open('network.json', 'w') as outfile:
         json.dump(network_data, outfile)
     print(json.dumps(network_data, sort_keys=True, indent=4, separators=(',', ': ')))
-    print(nn.feed_forward(network.training_sets[0][0]))
+    print(neural_network_data.feed_forward(network.training_sets[0][0]))
     print('Total error: ', total_error)
 
-def main(filepath = './ToTest/Kuindji_Rannyy_vesna.jpg'):
+def main(filepath='./ToTest/Kuindji_Raneural_network_datayy_vesna.jpg'):
+    """Get image season"""
     size = 64, 64
-
     network = NetworkInfo()
     if network.is_read_file_error:
         return
-    nn = neural_network.NeuralNetwork(
+    neural_network_data = neural_network.NeuralNetwork(
         num_inputs=network.num_inputs,
         num_hidden=network.num_hidden,
         num_outputs=network.num_outputs,
@@ -179,7 +189,7 @@ def main(filepath = './ToTest/Kuindji_Rannyy_vesna.jpg'):
     img = img.resize(size, Image.ANTIALIAS)
     histogram = get_histogram(img, size)
 
-    network_outputs = nn.feed_forward(histogram)
+    network_outputs = neural_network_data.feed_forward(histogram)
     answer_text = ['autumn', 'summer', 'spring', 'winter']
     print('network_outputs:')
     answer = []
@@ -189,17 +199,18 @@ def main(filepath = './ToTest/Kuindji_Rannyy_vesna.jpg'):
             answer.append(indx)
     if len(answer) == 0:
         index = max_to_index(network_outputs)
-        print('Время года: наверное это', answer_text[index])
+        print('Season: maybe is a ', answer_text[index])
     elif len(answer) > 1:
         index = max_of_outputs_to_index(answer, network_outputs)
-        print('Время года: скорее всего это', answer_text[index])
+        print('Season: likely is a ', answer_text[index])
         for result in answer:
             if result != index:
-                print('И это похоже на:', answer_text[result])
+                print('And it looks like a ', answer_text[result])
     else:
-        print('Время года: ', answer_text[answer[0]])
+        print('Season is a ', answer_text[answer[0]])
 
 def max_to_index(value):
+    """@return index of max value"""
     max_value = 0
     index_of_max = 0
     for indx, output in enumerate(value):
@@ -209,6 +220,7 @@ def max_to_index(value):
     return index_of_max
 
 def max_of_outputs_to_index(answer, network_outputs):
+    """@return index of max value"""
     max_value = 0
     index_of_max = 0
     for output in answer:
@@ -217,7 +229,8 @@ def max_of_outputs_to_index(answer, network_outputs):
             index_of_max = output
     return index_of_max
 
-def help():
+def helper():
+    """View help info"""
     print('Usage: python main.py [-h] [-t] [-f]')
     print('-t, --train [error]        train neural-network or create new (standart error = 0.0001)')
     print('-f, --file [file_path]       get image season')
@@ -225,13 +238,13 @@ def help():
 if __name__ == "__main__":
     try:
         if sys.argv[1] == '--help' or sys.argv[1] == '-h':
-            sys.exit(help())
+            sys.exit(helper())
         if sys.argv[1] == '--file' or sys.argv[1] == '-f':
             try:
                 sys.exit(main(sys.argv[2]))
-            except IndexError as e:
-                print(e)
-                help()
+            except IndexError as error:
+                print(error)
+                helper()
                 sys.exit()
         if sys.argv[1] == '--train' or sys.argv[1] == '-t':
             try:
